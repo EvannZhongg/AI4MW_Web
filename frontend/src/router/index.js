@@ -9,7 +9,6 @@ import DeviceAnalysisView from '../views/DeviceAnalysisView.vue'
 import DeviceComparisonView from '../views/DeviceComparisonView.vue'
 // 导入新的 SettingsView 组件
 import SettingsView from '../views/SettingsView.vue'
-import DeviceParsingView from '../views/DeviceParsingView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -61,12 +60,7 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingsView
-    },
-    {
-      path: '/device-parsing',
-      name: 'device-parsing',
-      component: DeviceParsingView
-    },
+    }
   ]
 })
 

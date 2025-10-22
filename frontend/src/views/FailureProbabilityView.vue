@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import axios from 'axios'
+// 1. 移除 axios 导入，导入 apiService
+import apiService from '@/services/apiService';
 import { ElMessage } from 'element-plus'
 import Papa from 'papaparse'
 import { use } from 'echarts/core'
@@ -77,10 +78,15 @@ const calculateSystemFailure = async () => {
       pr_dbm: prDbmInput.value,
       components: components.value.filter(c => c.data && c.weight > 0) // 只发送有数据和权重的组件
     };
-    const response = await axios.post('/api/calculate/system-failure-probability/', payload);
+    // 2. 使用 apiService 进行计算
+    const response = await apiService.calculateFailureProbability(payload);
     systemFailureProbability.value = response.data.system_failure_probability;
   } catch (error) {
-    ElMessage.error('计算失败！');
+    // 401 错误已在 apiService 中统一处理
+    if (error.response?.status !== 401) {
+        ElMessage.error('计算失败！');
+    }
+    console.error(error); // 仍然可以保留 console.error 用于调试
   } finally {
     calculationLoading.value = false;
   }
@@ -89,9 +95,15 @@ const calculateSystemFailure = async () => {
 // --- 右侧功能：数据集管理 ---
 const fetchDatasets = async () => {
   try {
-    const response = await axios.get('/api/probability-datasets/');
+    // 3. 使用 apiService 获取数据集列表
+    const response = await apiService.getProbabilityDatasets();
     datasets.value = response.data;
-  } catch { ElMessage.error('获取数据集列表失败！'); }
+  } catch(error) {
+     if (error.response?.status !== 401) {
+        ElMessage.error('获取数据集列表失败！');
+     }
+     console.error(error);
+  }
 }
 onMounted(fetchDatasets);
 
@@ -116,10 +128,16 @@ const handlePowerProbFileChange = (event) => {
         y: results.data.map(row => row['概率']),
       };
       try {
-        await axios.post('/api/probability-datasets/', { name: newDatasetName.value, data: chartData });
+        // 4. 使用 apiService 创建数据集
+        await apiService.createProbabilityDataset({ name: newDatasetName.value, data: chartData });
         ElMessage.success(`数据集 [${newDatasetName.value}] 已保存到数据库！`);
         fetchDatasets(); // 刷新列表
-      } catch { ElMessage.error('保存到数据库失败，名称可能已存在！'); }
+      } catch(error) {
+        if (error.response?.status !== 401) {
+           ElMessage.error('保存到数据库失败，名称可能已存在！');
+        }
+        console.error(error);
+      }
     }
   });
 }
@@ -128,7 +146,6 @@ const handlePowerProbFileChange = (event) => {
 <template>
   <div class="failure-prob-page">
     <el-row :gutter="20">
-      <!-- 左侧 -->
       <el-col :span="12">
         <div class="left-panel">
           <el-card shadow="never">
@@ -166,7 +183,6 @@ const handlePowerProbFileChange = (event) => {
         </div>
       </el-col>
 
-      <!-- 右侧 -->
       <el-col :span="12">
         <div class="right-panel">
           <el-card shadow="never">
